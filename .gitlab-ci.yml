@@ -1,0 +1,70 @@
+# Pipeline SonNuage bureau
+#  - build   : un paquet par système en parallèle (build/package.sh), dans les artefacts
+#              win-x64 : SonNuage.exe autonome · osx-arm64, osx-x64 : SonNuage.app · linux-x64 : archive
+#  - release : sur tag vX.Y.Z, paquets dans le registre de paquets génériques et release GitLab
+#
+# SonNuage.UI vient du registre NuGet du projet pmj.bailly/sonnuage : ce projet doit être autorisé dans
+# sonnuage → Settings → CI/CD → Job token permissions (liste des projets autorisés).
+#
+# Rapidité : paquets NuGet dans /nuget, un dossier de la machine monté par le runner (ni zip ni téléversement),
+# images publiques téléchargées une seule fois (pull_policy if-not-present du runner).
+
+stages: [build, release]
+
+variables:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+  NUGET_PACKAGES: /nuget
+  # Verrous NuGet dans le dossier partagé : sinon deux jobs en parallèle extraient le même paquet en même temps.
+  NUGET_SCRATCH: /nuget/.scratch
+  GIT_DEPTH: "10"
+  FF_USE_FASTZIP: "true"
+  ARTIFACT_COMPRESSION_LEVEL: fastest
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH
+
+default:
+  interruptible: true
+
+.version: &version
+  - |
+    if [ -n "$CI_COMMIT_TAG" ]; then export VERSION="${CI_COMMIT_TAG#v}"; else export VERSION="0.1.0-ci.${CI_PIPELINE_IID}"; fi
+    echo "Version $VERSION"
+
+desktop:
+  stage: build
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  parallel:
+    matrix:
+      - RID: [win-x64, linux-x64, osx-arm64, osx-x64]
+  script:
+    - *version
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends zip > /dev/null
+    - dotnet nuget update source sonnuage --username gitlab-ci-token --password "$CI_JOB_TOKEN" --store-password-in-clear-text --configfile nuget.config
+    - build/package.sh "$RID" "$VERSION" "$CI_PROJECT_DIR/dist"
+  artifacts:
+    name: "sonnuage-desktop-$RID"
+    paths: [dist/]
+    expire_in: 30 days
+
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs: [desktop]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+  script:
+    - *version
+    - apk add --no-cache curl > /dev/null
+    - |
+      set --
+      for f in dist/*; do
+        name=$(basename "$f")
+        url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/sonnuage-desktop/${VERSION}/${name}"
+        curl --fail --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file "$f" "$url"
+        set -- "$@" --assets-link "{\"name\":\"$name\",\"url\":\"$url\",\"link_type\":\"package\"}"
+      done
+      release-cli create --name "SonNuage bureau $VERSION" --tag-name "$CI_COMMIT_TAG" "$@"

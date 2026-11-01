@@ -1,0 +1,9 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+.idea/
+
+# Paquets produits par build/package.sh
+/dist/

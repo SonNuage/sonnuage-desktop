@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=SonNuage
+Comment=Lecteur de musique SonNuage
+# Chemins à adapter au dossier d'installation (par exemple ~/.local/opt/SonNuage), puis copier ce fichier dans
+# ~/.local/share/applications.
+Exec=SonNuage
+Icon=sonnuage
+Categories=AudioVideo;Audio;Player;
+StartupWMClass=SonNuage

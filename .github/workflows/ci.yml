@@ -1,0 +1,77 @@
+# Pipeline GitHub Actions, équivalent de .gitlab-ci.yml.
+#  - desktop : un paquet par système (build/package.sh), en artefacts
+#  - release : sur tag vX.Y.Z, release GitHub avec les paquets
+#
+# Les pages viennent des sources du dépôt sonnuage, extrait à côté de celui-ci (../sonnuage), plutôt que du paquet
+# NuGet : pas de registre à authentifier. Dépôt privé : définir le secret SONNUAGE_REPO_TOKEN (jeton en lecture).
+# Branche ou tag du dépôt sonnuage : main par défaut, modifiable au lancement manuel.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      server_ref:
+        description: Branche ou tag du dépôt sonnuage
+        default: main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+
+jobs:
+  desktop:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rid: [win-x64, linux-x64, osx-arm64, osx-x64]
+    outputs:
+      version: ${{ steps.v.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: sonnuage-desktop
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/sonnuage
+          ref: ${{ inputs.server_ref || 'main' }}
+          token: ${{ secrets.SONNUAGE_REPO_TOKEN || github.token }}
+          path: sonnuage
+      - id: v
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then v="${GITHUB_REF_NAME#v}"; else v="0.1.0-ci.${GITHUB_RUN_NUMBER}"; fi
+          echo "value=$v" >> "$GITHUB_OUTPUT"
+          echo "Version $v"
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: sonnuage-desktop/global.json
+      - run: sonnuage-desktop/build/package.sh "${{ matrix.rid }}" "${{ steps.v.outputs.value }}" "$GITHUB_WORKSPACE/dist" -p:SonNuageRepo="$GITHUB_WORKSPACE/sonnuage"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sonnuage-desktop-${{ matrix.rid }}
+          path: dist/
+          retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: desktop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sonnuage-desktop-*
+          path: dist
+          merge-multiple: true
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "SonNuage bureau ${{ needs.desktop.outputs.version }}"

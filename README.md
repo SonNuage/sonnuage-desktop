@@ -1,0 +1,68 @@
+# SonNuage bureau
+
+Appli de bureau de [SonNuage](https://git.pmjb.org/pmj.bailly/sonnuage), serveur de musique auto-hébergé, pour
+Windows, macOS et Linux. Les pages du client web s'affichent dans la webview du système (WebView2 sous Windows,
+WKWebView sous macOS, WebKitGTK sous Linux) grâce à [Photino](https://www.tryphotino.io/). Pas de Chromium embarqué :
+environ 40 Mo, runtime .NET compris, et 120 Mo de mémoire.
+
+| Dossier | Rôle |
+|---|---|
+| `src/SonNuage.Desktop` | Application : hôte Photino, icône de la barre système, stockage des comptes |
+| `build/` | Paquets par système (`package.sh`), Info.plist et icône macOS, lanceur Linux |
+
+Les pages, les composants et le lecteur (`WebPlayer`) viennent de la bibliothèque `SonNuage.UI` du dépôt
+[sonnuage](https://git.pmjb.org/pmj.bailly/sonnuage) :
+
+- **en CI** : paquet NuGet publié par la CI de `sonnuage` (version dans `Directory.Packages.props`)
+- **en développement** : si `sonnuage` est cloné à côté de ce dépôt (`../sonnuage`), ses sources sont utilisées
+  directement (voir `Directory.Build.props`, propriété `SonNuageRepo`).
+
+Pour suivre une nouvelle version du serveur, monter `SonNuage.UI` dans `Directory.Packages.props` à la version
+publiée (`X.Y.Z` pour un tag du serveur, `0.1.0-ci.N` pour un build de `main`).
+
+## Développement
+
+```bash
+dotnet run --project src/SonNuage.Desktop
+```
+
+## Fonctionnement
+
+- **Comptes** : au premier lancement, l'appli demande l'adresse du serveur puis l'identifiant. Plusieurs serveurs
+  et comptes, comme sur Android. Changer de compte arrête la lecture et recharge la file de l'autre compte.
+- **Barre système** : fermer la fenêtre la cache et la musique continue. L'icône la rouvre (clic sous Windows,
+  menu ailleurs) et offre lecture/pause, suivant, précédent et Quitter. Sans icône (Linux sans indicateur), fermer
+  la fenêtre quitte l'appli.
+- **Touches média** et contrôles du système : par l'API MediaSession de la webview, comme dans un navigateur.
+- **Données** : `%APPDATA%\SonNuage`, `~/Library/Application Support/SonNuage` ou `~/.config/SonNuage`. Réglages
+  dans `settings.json`. La session est dans `session.json`, chiffrée par DPAPI sous Windows, lisible par le seul
+  utilisateur sous macOS et Linux.
+
+## Paquets
+
+```bash
+build/package.sh win-x64 0.1.0 dist
+```
+
+| Système | RID | Paquet |
+|---|---|---|
+| Windows | `win-x64` | `SonNuage-<version>-win-x64.zip` : `SonNuage.exe` autonome. WebView2 est fourni par Windows 10 et 11 |
+| macOS | `osx-arm64`, `osx-x64` | `SonNuage-<version>-<rid>.zip` : `SonNuage.app`, non signée. Premier lancement : clic droit → Ouvrir |
+| Linux | `linux-x64` | `SonNuage-<version>-linux-x64.tar.gz` : exécutable et lanceur `.desktop` |
+
+Sous Linux, il faut `libwebkit2gtk-4.1-0` et, pour l'icône, `libayatana-appindicator3-1` (GNOME : avec l'extension
+AppIndicator).
+
+## CI/CD
+
+- **GitLab** ([.gitlab-ci.yml](.gitlab-ci.yml)) : les quatre paquets en parallèle à chaque push, en artefacts.
+  Sur tag `vX.Y.Z`, registre de paquets génériques et release GitLab. Le projet doit être autorisé dans
+  sonnuage → Settings → CI/CD → Job token permissions, pour lire le paquet `SonNuage.UI`.
+- **GitHub Actions** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : même chose, avec les sources de
+  `sonnuage` extraites à côté. Dépôt privé : secret `SONNUAGE_REPO_TOKEN`.
+
+## Limites connues
+
+- macOS et Linux ne sont pas encore essayés sur une vraie machine. Seul Windows l'a été.
+- Pré-chargement des pistes suivantes inactif : il passe par `fetch` depuis la page et le serveur n'envoie pas
+  d'en-têtes CORS sur le flux. La lecture, elle, fonctionne.

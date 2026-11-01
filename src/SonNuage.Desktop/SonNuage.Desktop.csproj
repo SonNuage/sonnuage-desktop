@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <!-- WinExe : pas de console sous Windows. Sans effet sous macOS et Linux. -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SonNuage.Desktop</RootNamespace>
+    <AssemblyName>SonNuage</AssemblyName>
+    <ApplicationIcon>wwwroot\icons\sonnuage.ico</ApplicationIcon>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Les DTO sont (dé)sérialisés par réflexion : publication autonome sans rognage. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>fr;en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Photino.Blazor" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+  </ItemGroup>
+
+  <!-- Pages et composants partagés avec le client web : sources du dépôt sonnuage s'il est cloné à côté (développement),
+       sinon paquet NuGet publié par sa CI (version dans Directory.Packages.props). -->
+  <ItemGroup Condition="Exists('$(SonNuageUiProject)')">
+    <ProjectReference Include="$(SonNuageUiProject)" />
+  </ItemGroup>
+  <ItemGroup Condition="!Exists('$(SonNuageUiProject)')">
+    <PackageReference Include="SonNuage.UI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
