@@ -74,4 +74,4 @@ jobs:
           merge-multiple: true
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "SonNuage bureau ${{ needs.desktop.outputs.version }}"
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "SonNuage bureau ${{ needs.desktop.outputs.version }}" --generate-notes
