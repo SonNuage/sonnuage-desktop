@@ -1,6 +1,6 @@
 # SonNuage bureau
 
-Appli de bureau de [SonNuage](https://git.pmjb.org/sonnuage/sonnuage), serveur de musique auto-hébergé, pour
+Appli de bureau de [SonNuage](https://github.com/SonNuage/sonnuage), serveur de musique auto-hébergé, pour
 Windows, macOS et Linux. Les pages du client web s'affichent dans la webview du système (WebView2 sous Windows,
 WKWebView sous macOS, WebKitGTK sous Linux) grâce à [Photino](https://www.tryphotino.io/). Pas de Chromium embarqué :
 environ 40 Mo, runtime .NET compris, et 120 Mo de mémoire.
@@ -11,7 +11,7 @@ environ 40 Mo, runtime .NET compris, et 120 Mo de mémoire.
 | `build/` | Paquets par système (`package.sh`), Info.plist et icône macOS, lanceur Linux |
 
 Les pages, les composants et le lecteur (`WebPlayer`) viennent de la bibliothèque `SonNuage.UI` du dépôt
-[sonnuage](https://git.pmjb.org/sonnuage/sonnuage) :
+[sonnuage](https://github.com/SonNuage/sonnuage) :
 
 - **en CI** : paquet NuGet publié par la CI de `sonnuage` (version dans `Directory.Packages.props`)
 - **en développement** : si `sonnuage` est cloné à côté de ce dépôt (`../sonnuage`), ses sources sont utilisées
