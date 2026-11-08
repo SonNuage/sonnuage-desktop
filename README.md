@@ -18,7 +18,8 @@ Les pages, les composants et le lecteur (`WebPlayer`) viennent de la bibliothèq
   directement (voir `Directory.Build.props`, propriété `SonNuageRepo`).
 
 Pour suivre une nouvelle version du serveur, monter `SonNuage.UI` dans `Directory.Packages.props` à la version
-publiée (`X.Y.Z` pour un tag du serveur, `0.1.0-ci.N` pour un build de `main`).
+publiée `X.Y.Z` (tag du serveur). Les builds `0.1.0-ci.N` de `main` ne restent pas dans le registre : ne pas s'y
+fier pour une version de l'appli. Le test `CompositionTests` signale une dépendance nouvelle qui manquerait.
 
 ## Développement
 
