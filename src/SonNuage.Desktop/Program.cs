@@ -21,14 +21,7 @@ public static class Program
         builder.RootComponents.Add<HeadOutlet>("head::after");
         builder.RootComponents.Add<JsBridge>("#bridge");
 
-        builder.Services.AddSingleton<IKeyValueStore>(new DesktopStore(dataDir));
-        builder.Services.AddSingleton<IServerEndpoint, AccountEndpoint>();
-        builder.Services.AddSingleton<IPlatformInfo, DesktopPlatform>();
-        builder.Services.AddSingleton<PageJsRuntime>();
-        builder.Services.AddSingleton<IPlayer>(sp => new WebPlayer(
-            sp.GetRequiredService<PageJsRuntime>(), sp.GetRequiredService<ApiClient>(), sp.GetRequiredService<PlaybackSettings>(),
-            sp.GetRequiredService<IKeyValueStore>(), sp.GetRequiredService<AccountStore>()));
-        builder.Services.AddSonNuageUi(multiAccount: true);
+        builder.Services.AddSonNuageDesktop(dataDir);
 
         var app = builder.Build();
 
