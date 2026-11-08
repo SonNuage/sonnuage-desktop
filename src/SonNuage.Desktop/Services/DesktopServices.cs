@@ -127,6 +127,8 @@ public sealed class DesktopPlatform : IPlatformInfo
 {
     public bool HasMeteredNetworkDetection => false;
     public string Name => "desktop";
+    /// <summary>Version publiée de l'application, affichée dans l'aide et le menu du compte.</summary>
+    public string? AppVersion => SonNuage.Contracts.AppVersion.Of(typeof(DesktopPlatform).Assembly);
 }
 
 /// <summary>
