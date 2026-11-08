@@ -24,7 +24,11 @@ publiée (`X.Y.Z` pour un tag du serveur, `0.1.0-ci.N` pour un build de `main`).
 
 ```bash
 dotnet run --project src/SonNuage.Desktop
+dotnet test
 ```
+
+Les tests (`tests/SonNuage.Desktop.Tests`) couvrent le stockage local (`DesktopStore`) et l'adresse du serveur
+(`AccountEndpoint`). L'icône de la barre système et la fenêtre s'essaient à la main, sur chaque système.
 
 ## Fonctionnement
 
@@ -55,7 +59,7 @@ AppIndicator).
 
 ## CI/CD
 
-- **GitLab** ([.gitlab-ci.yml](.gitlab-ci.yml)) : les quatre paquets en parallèle à chaque push, en artefacts.
+- **GitLab** ([.gitlab-ci.yml](.gitlab-ci.yml)) : les tests et les quatre paquets en parallèle à chaque push, en artefacts.
   Sur `main`, semantic-release crée le tag `vX.Y.Z` et sa release, à laquelle le pipeline du tag joint les paquets. Le projet doit être autorisé dans
   sonnuage → Settings → CI/CD → Job token permissions, pour lire le paquet `SonNuage.UI`.
 - **GitHub Actions** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : même chose, avec les sources de

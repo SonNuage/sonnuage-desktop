@@ -1,4 +1,5 @@
 # Pipeline GitHub Actions, équivalent de .gitlab-ci.yml.
+#  - test    : tests (tests/)
 #  - desktop : un paquet par système (build/package.sh), en artefacts
 #  - release : sur tag vX.Y.Z, release GitHub avec les paquets
 #
@@ -28,6 +29,24 @@ env:
   DOTNET_NOLOGO: '1'
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: sonnuage-desktop
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/sonnuage
+          ref: ${{ inputs.server_ref || 'main' }}
+          token: ${{ secrets.SONNUAGE_REPO_TOKEN || github.token }}
+          path: sonnuage
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: sonnuage-desktop/global.json
+      - run: dotnet test -p:SonNuageRepo="$GITHUB_WORKSPACE/sonnuage"
+        working-directory: sonnuage-desktop
+
   desktop:
     runs-on: ubuntu-latest
     strategy:
@@ -62,7 +81,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: desktop
+    needs: [test, desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write

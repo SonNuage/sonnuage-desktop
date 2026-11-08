@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/SonNuage.Desktop/SonNuage.Desktop.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SonNuage.Desktop.Tests/SonNuage.Desktop.Tests.csproj" />
+  </Folder>
 </Solution>

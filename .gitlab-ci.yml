@@ -1,5 +1,5 @@
 # Pipeline SonNuage bureau
-#  - build   : un paquet par système en parallèle (build/package.sh), dans les artefacts
+#  - build   : tests (tests/), et un paquet par système en parallèle (build/package.sh), dans les artefacts
 #              win-x64 : SonNuage.exe autonome · osx-arm64, osx-x64 : SonNuage.app · linux-x64 : archive
 #  - release : sur main, semantic-release choisit la version et crée le tag vX.Y.Z et sa release. Le pipeline du
 #              tag y joint les paquets (registre de paquets génériques)
@@ -30,6 +30,20 @@ workflow:
 default:
   interruptible: true
 
+.nuget-auth: &nuget-auth
+  - dotnet nuget update source sonnuage --username gitlab-ci-token --password "$CI_JOB_TOKEN" --store-password-in-clear-text --configfile nuget.config
+
+test:
+  stage: build
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  script:
+    - *nuget-auth
+    - dotnet test --report-trx --results-directory "$CI_PROJECT_DIR/TestResults"
+  artifacts:
+    when: always
+    paths: [TestResults/]
+    expire_in: 7 days
+
 .version: &version
   - |
     if [ -n "$CI_COMMIT_TAG" ]; then export VERSION="${CI_COMMIT_TAG#v}"; else export VERSION="0.1.0-ci.${CI_PIPELINE_IID}"; fi
@@ -44,7 +58,7 @@ desktop:
   script:
     - *version
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends zip > /dev/null
-    - dotnet nuget update source sonnuage --username gitlab-ci-token --password "$CI_JOB_TOKEN" --store-password-in-clear-text --configfile nuget.config
+    - *nuget-auth
     - build/package.sh "$RID" "$VERSION" "$CI_PROJECT_DIR/dist"
   artifacts:
     name: "sonnuage-desktop-$RID"
@@ -57,7 +71,7 @@ desktop:
 semantic-release:
   stage: release
   image: node:22-alpine
-  needs: [desktop]
+  needs: [test, desktop]
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"
   variables:

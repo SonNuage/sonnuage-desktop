@@ -11,5 +11,8 @@
     <PackageVersion Include="Photino.Blazor" Version="4.0.13" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.14" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+    <!-- Tests : mêmes versions que le dépôt sonnuage. TrxReport suit Microsoft.Testing.Platform tiré par xunit.v3. -->
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.5.1" />
   </ItemGroup>
 </Project>
