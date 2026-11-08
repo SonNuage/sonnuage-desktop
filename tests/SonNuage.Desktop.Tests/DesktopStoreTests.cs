@@ -1,5 +1,6 @@
 using System.Text;
 using SonNuage.Desktop.Services;
+using SonNuage.UI.Services;
 
 namespace SonNuage.Desktop.Tests;
 
@@ -42,7 +43,8 @@ public sealed class DesktopStoreTests : IDisposable
     [Fact]
     public async Task Session_tokens_stay_out_of_the_settings_file()
     {
-        var key = $"sonnuage.session.{Guid.NewGuid():N}";
+        // Clé réelle d'un compte, telle qu'AccountStore la forme.
+        var key = AccountStore.Scoped(AccountStore.SessionBaseKey, Guid.NewGuid());
         var store = new DesktopStore(_dir);
         await store.SetAsync(key, "secret-token");
         await store.SetAsync("sonnuage.theme", "dark");

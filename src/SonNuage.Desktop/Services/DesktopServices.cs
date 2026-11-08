@@ -9,12 +9,11 @@ namespace SonNuage.Desktop.Services;
 
 /// <summary>
 /// Réglages dans un fichier JSON du profil (settings.json). La session et ses jetons vont dans un fichier à part
-/// (session.json) : chiffré par DPAPI sous Windows, lisible par le seul utilisateur sous macOS et Linux.
+/// (session.json) : chiffré par DPAPI sous Windows, lisible par le seul utilisateur sous macOS et Linux. Clés de
+/// session : celles d'<see cref="AccountStore"/>, <see cref="AccountStore.SessionBaseKey"/> et ses variantes par compte.
 /// </summary>
 public sealed class DesktopStore : IKeyValueStore
 {
-    private const string SecurePrefix = "sonnuage.session";
-
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly string _settingsPath;
     private readonly string _sessionPath;
@@ -59,7 +58,7 @@ public sealed class DesktopStore : IKeyValueStore
         }
     }
 
-    private static bool IsSecure(string key) => key.StartsWith(SecurePrefix, StringComparison.Ordinal);
+    private static bool IsSecure(string key) => key.StartsWith(AccountStore.SessionBaseKey, StringComparison.Ordinal);
 
     private Dictionary<string, string> File(string key) => IsSecure(key)
         ? _session ??= Read(_sessionPath, secure: true)
