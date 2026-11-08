@@ -73,16 +73,15 @@ public sealed class Shell : IDisposable
         if (_shown == shown) return;
         _shown = shown;
 
-        string T(string key, string fallback) => l.Has(key) ? l[key] : fallback;
         _tray.SetToolTip(tip);
         _tray.SetMenu([
-            new TrayItem(T("desktop.show", "SonNuage"), () => _window?.Show()),
+            new TrayItem(l["desktop.show"], () => _window?.Show()),
             TrayItem.Separator,
-            new TrayItem(state.IsPlaying ? T("player.pause", "Pause") : T("player.play", "Play"), () => Command(p => p.TogglePlayAsync()), track is not null),
-            new TrayItem(T("player.next", "Next"), () => Command(p => p.NextAsync()), track is not null),
-            new TrayItem(T("player.previous", "Previous"), () => Command(p => p.PreviousAsync()), track is not null),
+            new TrayItem(state.IsPlaying ? l["player.pause"] : l["player.play"], () => Command(p => p.TogglePlayAsync()), track is not null),
+            new TrayItem(l["player.next"], () => Command(p => p.NextAsync()), track is not null),
+            new TrayItem(l["player.previous"], () => Command(p => p.PreviousAsync()), track is not null),
             TrayItem.Separator,
-            new TrayItem(T("desktop.quit", "Quit"), Quit),
+            new TrayItem(l["desktop.quit"], Quit),
         ]);
     }
 
