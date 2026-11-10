@@ -1,0 +1,23 @@
+@implements IDisposable
+@inject UpdateService Updates
+
+@* Nouvelle version de l'appli (release GitLab) : même bandeau que l'avis de déploiement du web. *@
+@if (Updates is { State: UpdateState.Available or UpdateState.Downloading, Available: { } update } && Updates.DismissedVersion != update.Version)
+{
+    var downloading = Updates.State == UpdateState.Downloading;
+    <div class="update-notice" role="status">
+        <span>@L["desktop.update.available", ("version", update.Version)]</span>
+        <button class="btn primary" disabled="@downloading" @onclick="Updates.InstallAsync">
+            @(downloading ? L["desktop.update.downloading"] : update.Installer is null ? L["desktop.update.download"] : L["desktop.update.install"])
+        </button>
+        <button class="btn" @onclick="Updates.Dismiss">@L["desktop.update.later"]</button>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized() => Updates.Changed += OnChanged;
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Updates.Changed -= OnChanged;
+}

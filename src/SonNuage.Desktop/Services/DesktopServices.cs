@@ -129,6 +129,12 @@ public sealed class DesktopPlatform : IPlatformInfo
     public string Name => "desktop";
     /// <summary>Version publiée de l'application, affichée dans l'aide et le menu du compte.</summary>
     public string? AppVersion => SonNuage.Contracts.AppVersion.Of(typeof(DesktopPlatform).Assembly);
+    // Composants que SonNuage.UI affiche à partir de sa version 1.25 (IPlatformInfo) ; sans effet avec une version
+    // plus ancienne, qui ne les demande pas. Seuls des types de base : le code compile avec les deux.
+    /// <summary>Lancement avec la session, démarrage caché, mises à jour : dans Réglages.</summary>
+    public IReadOnlyList<Type> SettingsSections => [typeof(Components.DesktopSettingsPanel)];
+    /// <summary>Bandeau « nouvelle version », en haut de l'interface.</summary>
+    public IReadOnlyList<Type> Notices => [typeof(Components.UpdateBanner)];
 }
 
 /// <summary>

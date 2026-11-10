@@ -1,0 +1,83 @@
+@implements IDisposable
+@inject DesktopOptions Options
+@inject UpdateService Updates
+@inject UiState Ui
+
+@* Réglages propres à l'ordinateur, affichés par la page Réglages de SonNuage.UI (IPlatformInfo.SettingsSections). *@
+<section class="panel">
+    <h2>@L["desktop.settings.title"]</h2>
+    @if (Options.CanStartWithSession)
+    {
+        <label class="field check">
+            <input id="desktop-start-session" type="checkbox" checked="@_withSession" @onchange="e => SetWithSessionAsync(e.Value is true)" />
+            <span>@L["desktop.settings.startWithSession"]</span>
+        </label>
+        <div class="field">
+            <label class="field check">
+                <input id="desktop-start-hidden" type="checkbox" checked="@_hidden" disabled="@(!_withSession)" @onchange="e => SetHiddenAsync(e.Value is true)" />
+                <span>@L["desktop.settings.startHidden"]</span>
+            </label>
+            <small class="muted">@L["desktop.settings.startHiddenHint"]</small>
+        </div>
+    }
+
+    <h3>@L["desktop.update.title"]</h3>
+    <p class="muted">@Status()</p>
+    @if (Updates.State != UpdateState.Disabled)
+    {
+        <div class="row">
+            @if (Updates is { State: UpdateState.Available, Available: { } update })
+            {
+                <button class="btn primary" @onclick="Updates.InstallAsync">@(update.Installer is null ? L["desktop.update.download"] : L["desktop.update.install"])</button>
+            }
+            <button class="btn" disabled="@(Updates.State is UpdateState.Checking or UpdateState.Downloading)" @onclick="() => Updates.CheckAsync()">@L["desktop.update.check"]</button>
+        </div>
+    }
+</section>
+
+@code {
+    private bool _withSession;
+    private bool _hidden;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Updates.Changed += OnChanged;
+        _withSession = Options.StartWithSession;
+        _hidden = await Options.StartHiddenAsync();
+    }
+
+    private string Status() => Updates.State switch
+    {
+        UpdateState.Disabled => L["desktop.update.disabled"],
+        UpdateState.Checking => L["desktop.update.checking"],
+        UpdateState.Downloading => L["desktop.update.downloading"],
+        UpdateState.Failed => L["desktop.update.failed"],
+        UpdateState.Available when Updates.InstallFailed => L["desktop.update.installFailed"],
+        UpdateState.Available => L["desktop.update.available", ("version", Updates.Available!.Version)],
+        _ => L["desktop.update.upToDate", ("version", Updates.CurrentVersion)],
+    };
+
+    private async Task SetWithSessionAsync(bool enabled)
+    {
+        try
+        {
+            await Options.SetStartWithSessionAsync(enabled);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            Ui.Notify(ex.Message, true);
+        }
+        // L'entrée du système fait foi : la case montre ce qui a vraiment été écrit.
+        _withSession = Options.StartWithSession;
+    }
+
+    private async Task SetHiddenAsync(bool enabled)
+    {
+        await Options.SetStartHiddenAsync(enabled);
+        _hidden = enabled;
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Updates.Changed -= OnChanged;
+}
