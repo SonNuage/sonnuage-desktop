@@ -72,6 +72,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: sonnuage-desktop/global.json
+      # Installeur Windows (NSIS) et image disque macOS (xorriso) ; zip et dpkg-deb sont déjà là.
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends nsis xorriso > /dev/null
       - run: sonnuage-desktop/build/package.sh "${{ matrix.rid }}" "${{ steps.v.outputs.value }}" "$GITHUB_WORKSPACE/dist" -p:SonNuageRepo="$GITHUB_WORKSPACE/sonnuage"
       - uses: actions/upload-artifact@v4
         with:
