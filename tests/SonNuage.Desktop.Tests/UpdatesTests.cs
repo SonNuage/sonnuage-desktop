@@ -26,7 +26,6 @@ public sealed class UpdatesTests : IDisposable
               { "name": "SonNuage-1.3.0-win-x64.zip", "url": "https://git.example.org/p/SonNuage-1.3.0-win-x64.zip" },
               { "name": "SonNuage-1.3.0-osx-arm64.dmg", "url": "https://git.example.org/p/SonNuage-1.3.0-osx-arm64.dmg" },
               { "name": "SonNuage-1.3.0-osx-x64.dmg", "url": "https://git.example.org/p/SonNuage-1.3.0-osx-x64.dmg" },
-              { "name": "SonNuage-1.3.0-linux-x64.AppImage", "url": "https://git.example.org/p/SonNuage-1.3.0-linux-x64.AppImage" },
               { "name": "sonnuage_1.3.0_amd64.deb", "url": "https://git.example.org/p/sonnuage_1.3.0_amd64.deb" },
               { "name": "SonNuage-1.3.0-linux-x64.tar.gz", "url": "https://git.example.org/p/SonNuage-1.3.0-linux-x64.tar.gz" },
               { "name": "SHA256SUMS", "url": "https://git.example.org/p/SHA256SUMS" }
@@ -42,7 +41,7 @@ public sealed class UpdatesTests : IDisposable
 
         Assert.Equal(new Version(1, 3, 0), release.Version);
         Assert.Equal("https://git.example.org/sonnuage/sonnuage-desktop/-/releases/v1.3.0", release.Page.ToString());
-        Assert.Equal(8, release.Assets.Count);
+        Assert.Equal(7, release.Assets.Count);
     }
 
     [Theory]
@@ -72,7 +71,6 @@ public sealed class UpdatesTests : IDisposable
     [InlineData(InstallKind.WindowsSetup, "SonNuage-1.3.0-win-x64-setup.exe")]
     [InlineData(InstallKind.MacArm64, "SonNuage-1.3.0-osx-arm64.dmg")]
     [InlineData(InstallKind.MacX64, "SonNuage-1.3.0-osx-x64.dmg")]
-    [InlineData(InstallKind.LinuxAppImage, "SonNuage-1.3.0-linux-x64.AppImage")]
     [InlineData(InstallKind.LinuxDeb, "sonnuage_1.3.0_amd64.deb")]
     [InlineData(InstallKind.Portable, null)]
     public void The_installer_matches_how_the_app_was_installed(InstallKind kind, string? asset)

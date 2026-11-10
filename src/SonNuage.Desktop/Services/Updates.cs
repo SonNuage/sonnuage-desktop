@@ -26,7 +26,6 @@ public enum InstallKind
     WindowsSetup,
     MacArm64,
     MacX64,
-    LinuxAppImage,
     LinuxDeb,
 }
 
@@ -84,7 +83,6 @@ public sealed record AvailableUpdate(string Version, Uri Page, ReleaseAsset? Ins
             InstallKind.WindowsSetup => "-win-x64-setup.exe",
             InstallKind.MacArm64 => "-osx-arm64.dmg",
             InstallKind.MacX64 => "-osx-x64.dmg",
-            InstallKind.LinuxAppImage => "-linux-x64.AppImage",
             InstallKind.LinuxDeb => "_amd64.deb",
             _ => null,
         };
@@ -249,11 +247,9 @@ public static class UpdateLauncher
             return File.Exists(Path.Combine(AppContext.BaseDirectory, "Uninstall.exe")) ? InstallKind.WindowsSetup : InstallKind.Portable;
         if (OperatingSystem.IsMacOS() && program.Contains(".app/Contents/MacOS/", StringComparison.Ordinal))
             return RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? InstallKind.MacArm64 : InstallKind.MacX64;
-        if (OperatingSystem.IsLinux() && RuntimeInformation.ProcessArchitecture == Architecture.X64)
-        {
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APPIMAGE"))) return InstallKind.LinuxAppImage;
-            if (program.StartsWith("/opt/sonnuage/", StringComparison.Ordinal)) return InstallKind.LinuxDeb;
-        }
+        // Paquet .deb : installé dans /opt/sonnuage (build/linux/deb.sh).
+        if (OperatingSystem.IsLinux() && RuntimeInformation.ProcessArchitecture == Architecture.X64
+            && program.StartsWith("/opt/sonnuage/", StringComparison.Ordinal)) return InstallKind.LinuxDeb;
         return InstallKind.Portable;
     }
 
@@ -274,28 +270,9 @@ public static class UpdateLauncher
                 // Logithèque du bureau (ou gestionnaire de paquets) : elle demande le mot de passe d'administration.
                 Process.Start("xdg-open", [file]);
                 return false;
-            case InstallKind.LinuxAppImage:
-                ReplaceAppImage(file);
-                return true;
             default:
                 throw new InvalidOperationException($"Pas d'installation automatique pour {kind}");
         }
-    }
-
-    /// <summary>
-    /// Le fichier .AppImage est remplacé (renommage atomique dans son dossier : l'appli qui tourne garde l'ancien),
-    /// puis relancé dès que ce processus s'est arrêté (sinon l'instance unique le renverrait vers lui).
-    /// </summary>
-    private static void ReplaceAppImage(string file)
-    {
-        var target = Environment.GetEnvironmentVariable("APPIMAGE") ?? throw new InvalidOperationException("APPIMAGE absent");
-        var staged = target + ".new";
-        File.Copy(file, staged, overwrite: true);
-        if (!OperatingSystem.IsWindows())
-            File.SetUnixFileMode(staged, File.GetUnixFileMode(target) | UnixFileMode.UserExecute | UnixFileMode.UserRead | UnixFileMode.UserWrite);
-        File.Move(staged, target, overwrite: true);
-        Process.Start("/bin/sh", ["-c", "while kill -0 \"$1\" 2>/dev/null; do sleep 0.5; done; exec \"$2\"", "sh",
-            Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture), target]);
     }
 
     /// <summary>Page de la version dans le navigateur par défaut.</summary>

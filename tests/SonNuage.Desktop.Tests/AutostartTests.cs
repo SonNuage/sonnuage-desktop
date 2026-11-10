@@ -32,7 +32,7 @@ public sealed class AutostartTests : IDisposable
     }
 
     [Theory]
-    [InlineData("/home/léa/Applications/SonNuage.AppImage", "\"/home/léa/Applications/SonNuage.AppImage\"")]
+    [InlineData("/home/léa/opt/SonNuage/SonNuage", "\"/home/léa/opt/SonNuage/SonNuage\"")]
     [InlineData("/home/a b/$HOME/x\"y`z\\w", "\"/home/a b/\\\\$HOME/x\\\\\"y\\\\`z\\\\\\\\w\"")]
     [InlineData("/opt/100%/SonNuage", "\"/opt/100%%/SonNuage\"")]
     public void Linux_quotes_the_program_as_the_desktop_entry_spec_wants(string program, string quoted)

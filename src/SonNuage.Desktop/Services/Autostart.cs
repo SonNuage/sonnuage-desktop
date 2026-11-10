@@ -30,11 +30,8 @@ public static class Autostart
         if (OperatingSystem.IsMacOS()) return new MacAutostart(home, program);
         if (OperatingSystem.IsLinux())
         {
-            // AppImage : le programme tourne depuis un montage temporaire, c'est le fichier .AppImage qu'il faut lancer.
-            var appImage = Environment.GetEnvironmentVariable("APPIMAGE");
             var config = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
-            return new LinuxAutostart(string.IsNullOrEmpty(config) ? Path.Combine(home, ".config") : config,
-                string.IsNullOrEmpty(appImage) ? program : appImage);
+            return new LinuxAutostart(string.IsNullOrEmpty(config) ? Path.Combine(home, ".config") : config, program);
         }
         return null;
     }
