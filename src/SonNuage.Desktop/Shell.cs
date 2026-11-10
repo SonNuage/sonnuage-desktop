@@ -28,12 +28,15 @@ public sealed class Shell : IDisposable
     private (bool Playing, bool HasTrack, string Tip, string Language)? _shown;
 
     private readonly SingleInstance? _instance;
+    // Lancée avec la session et « démarrer caché » : la fenêtre reste cachée tant qu'on ne la demande pas.
+    private volatile bool _hiddenAtStart;
 
-    public Shell(PhotinoBlazorApp app, string icons, SingleInstance? instance)
+    public Shell(PhotinoBlazorApp app, string icons, SingleInstance? instance, bool startHidden)
     {
         _app = app;
         _icons = icons;
         _instance = instance;
+        _hiddenAtStart = startHidden;
         _player = app.Services.GetRequiredService<IPlayer>();
         _page = app.Services.GetRequiredService<PageJsRuntime>();
         _localizer = app.Services.GetRequiredService<Localizer>();
@@ -57,6 +60,23 @@ public sealed class Shell : IDisposable
         _player.StateChanged += () => _app.MainWindow.Invoke(Refresh);
         _localizer.Changed += () => _app.MainWindow.Invoke(Refresh);
         Refresh();
+        if (_hiddenAtStart) HideAtStart();
+    }
+
+    /// <summary>
+    /// Seule l'icône reste (sans icône, la fenêtre reste réduite : rien d'autre ne la rouvrirait). Un système qui montre
+    /// la fenêtre après sa création la ferait réapparaître : on la recache une fois la boucle de messages partie.
+    /// </summary>
+    private void HideAtStart()
+    {
+        _window?.Hide();
+        _ = Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(_ =>
+        {
+            if (_hiddenAtStart && !_closed) _app.MainWindow.Invoke(() =>
+            {
+                if (_hiddenAtStart) _window?.Hide();
+            });
+        }, TaskScheduler.Default);
     }
 
     /// <summary>true : fermeture annulée, la fenêtre est seulement cachée.</summary>
@@ -72,13 +92,17 @@ public sealed class Shell : IDisposable
     }
 
     /// <summary>Montre la fenêtre et la passe au premier plan (thread de la fenêtre). Rien avant sa création.</summary>
-    public void Show() => _window?.Show();
+    public void Show()
+    {
+        _hiddenAtStart = false;
+        _window?.Show();
+    }
 
     private void Toggle()
     {
         if (_window is null) return;
         if (_window.IsVisible) _window.Hide();
-        else _window.Show();
+        else Show();
     }
 
     private void Refresh()
@@ -94,7 +118,7 @@ public sealed class Shell : IDisposable
 
         _tray.SetToolTip(tip);
         _tray.SetMenu([
-            new TrayItem(l["desktop.show"], () => _window?.Show()),
+            new TrayItem(l["desktop.show"], Show),
             TrayItem.Separator,
             new TrayItem(state.IsPlaying ? l["player.pause"] : l["player.play"], () => Command(p => p.TogglePlayAsync()), track is not null),
             new TrayItem(l["player.next"], () => Command(p => p.NextAsync()), track is not null),

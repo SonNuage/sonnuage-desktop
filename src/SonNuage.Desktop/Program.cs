@@ -34,10 +34,12 @@ public static class Program
         // de la fenêtre, qui doit rester celui de Main.
         var accounts = app.Services.GetRequiredService<AccountStore>();
         var settings = app.Services.GetRequiredService<PlaybackSettings>();
-        Task.Run(async () =>
+        var options = app.Services.GetRequiredService<DesktopOptions>();
+        var startHidden = Task.Run(async () =>
         {
             await accounts.LoadAsync();
             await settings.LoadAsync();
+            return DesktopOptions.ShouldStartHidden(args, await options.StartHiddenAsync());
         }).GetAwaiter().GetResult();
 
         var icons = Path.Combine(AppContext.BaseDirectory, "wwwroot", "icons");
@@ -53,12 +55,14 @@ public static class Program
             // Reprise de la lecture au démarrage, sans clic dans la page.
             .SetMediaAutoplayEnabled(true)
             // Profil de la webview (cache, stockage) avec les données de l'appli plutôt que dans le dossier courant.
-            .SetTemporaryFilesPath(Path.Combine(dataDir, "webview"));
+            .SetTemporaryFilesPath(Path.Combine(dataDir, "webview"))
+            // Démarrage caché : réduite d'emblée, puis cachée par Shell une fois l'icône en place.
+            .SetMinimized(startHidden);
 #if !DEBUG
         app.MainWindow.SetContextMenuEnabled(false);
 #endif
 
-        using var shell = new Shell(app, icons, instance);
+        using var shell = new Shell(app, icons, instance, startHidden);
         app.Run();
     }
 }

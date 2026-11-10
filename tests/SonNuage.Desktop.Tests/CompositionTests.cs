@@ -27,6 +27,7 @@ public sealed class CompositionTests : IDisposable
         Assert.IsType<DesktopPlatform>(provider.GetRequiredService<IPlatformInfo>());
         Assert.NotNull(provider.GetRequiredService<PlaybackSettings>());
         Assert.NotNull(provider.GetRequiredService<Localizer>());
+        Assert.NotNull(provider.GetRequiredService<DesktopOptions>());
     }
 
     [Fact]
