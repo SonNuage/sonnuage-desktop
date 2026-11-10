@@ -16,6 +16,11 @@ public static class Program
         // Données de l'appli : %APPDATA%\SonNuage, ~/Library/Application Support/SonNuage ou ~/.config/SonNuage.
         var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SonNuage");
 
+        // Une seule appli : un nouveau lancement ramène la fenêtre de celle qui tourne. Sans réponse de sa part
+        // (verrou tenu pour une autre raison), on démarre quand même plutôt que de ne rien ouvrir.
+        using var instance = SingleInstance.TryAcquire(dataDir);
+        if (instance is null && SingleInstance.ActivateRunningAsync(dataDir, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult()) return;
+
         var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
         builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
@@ -53,7 +58,7 @@ public static class Program
         app.MainWindow.SetContextMenuEnabled(false);
 #endif
 
-        using var shell = new Shell(app, icons);
+        using var shell = new Shell(app, icons, instance);
         app.Run();
     }
 }

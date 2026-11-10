@@ -22,13 +22,18 @@ public sealed class Shell : IDisposable
     private ITrayIcon? _tray;
     private IWindowControl? _window;
     private bool _quitting;
+    // Fenêtre native fermée (l'appli s'arrête) : plus d'Invoke possible.
+    private volatile bool _closed;
     // Dernier état affiché par l'icône : le menu n'est reconstruit que s'il change.
     private (bool Playing, bool HasTrack, string Tip, string Language)? _shown;
 
-    public Shell(PhotinoBlazorApp app, string icons)
+    private readonly SingleInstance? _instance;
+
+    public Shell(PhotinoBlazorApp app, string icons, SingleInstance? instance)
     {
         _app = app;
         _icons = icons;
+        _instance = instance;
         _player = app.Services.GetRequiredService<IPlayer>();
         _page = app.Services.GetRequiredService<PageJsRuntime>();
         _localizer = app.Services.GetRequiredService<Localizer>();
@@ -39,6 +44,13 @@ public sealed class Shell : IDisposable
     private void OnCreated()
     {
         _window = TrayFactory.CreateWindowControl(_app.MainWindow);
+        // macOS ne relance pas l'appli (Finder, Dock) : il demande à celle qui tourne de rouvrir sa fenêtre.
+        if (OperatingSystem.IsMacOS()) MacReopen.Register(Show);
+        // Un second lancement : la fenêtre revient. Abonné ici, une fois la fenêtre native créée (Invoke l'exige).
+        if (_instance is not null) _instance.Activated += () =>
+        {
+            if (!_closed) _app.MainWindow.Invoke(Show);
+        };
         _tray = TrayFactory.Create(_icons, Title);
         if (_tray is null) return;
         _tray.Activated += Toggle;
@@ -50,10 +62,17 @@ public sealed class Shell : IDisposable
     /// <summary>true : fermeture annulée, la fenêtre est seulement cachée.</summary>
     private bool OnClosing()
     {
-        if (_quitting || _tray is null || _window is null) return false;
+        if (_quitting || _tray is null || _window is null)
+        {
+            _closed = true;
+            return false;
+        }
         _window.Hide();
         return true;
     }
+
+    /// <summary>Montre la fenêtre et la passe au premier plan (thread de la fenêtre). Rien avant sa création.</summary>
+    public void Show() => _window?.Show();
 
     private void Toggle()
     {

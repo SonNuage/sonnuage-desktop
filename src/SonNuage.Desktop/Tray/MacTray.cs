@@ -129,6 +129,36 @@ internal sealed class MacWindow(string title) : IWindowControl
     }
 }
 
+/// <summary>
+/// Clic sur l'icône du Dock ou nouveau lancement depuis le Finder : macOS ne démarre pas une seconde appli, il
+/// envoie « reopen » à celle qui tourne. On l'ajoute au délégué d'application de Photino pour montrer la fenêtre.
+/// </summary>
+[SupportedOSPlatform("macos")]
+internal static unsafe class MacReopen
+{
+    private static Action? _onReopen;
+
+    /// <summary>À appeler sur le thread principal, une fois la fenêtre créée (délégué de Photino en place).</summary>
+    public static void Register(Action onReopen)
+    {
+        _onReopen = onReopen;
+        var app = Objc.Send(Objc.Class("NSApplication"), "sharedApplication");
+        var appDelegate = Objc.Send(app, "delegate");
+        if (appDelegate == IntPtr.Zero) return;
+        // BOOL : bool (« B ») sur Apple Silicon, signed char (« c ») sur Intel ; un octet dans les deux cas.
+        var types = RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "B@:@B" : "c@:@c";
+        Objc.class_replaceMethod(Objc.object_getClass(appDelegate), Objc.Sel("applicationShouldHandleReopen:hasVisibleWindows:"),
+            (IntPtr)(delegate* unmanaged<IntPtr, IntPtr, IntPtr, byte, byte>)&OnReopen, types);
+    }
+
+    [UnmanagedCallersOnly]
+    private static byte OnReopen(IntPtr self, IntPtr selector, IntPtr app, byte hasVisibleWindows)
+    {
+        _onReopen?.Invoke();
+        return 1;
+    }
+}
+
 [SupportedOSPlatform("macos")]
 internal static unsafe class Objc
 {
@@ -177,5 +207,7 @@ internal static unsafe class Objc
     [DllImport(Lib)] private static extern IntPtr sel_registerName([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
     [DllImport(Lib)] public static extern IntPtr objc_allocateClassPair(IntPtr superclass, [MarshalAs(UnmanagedType.LPUTF8Str)] string name, nint extraBytes);
     [DllImport(Lib)] public static extern void objc_registerClassPair(IntPtr cls);
+    [DllImport(Lib)] public static extern IntPtr object_getClass(IntPtr instance);
+    [DllImport(Lib)] public static extern IntPtr class_replaceMethod(IntPtr cls, IntPtr selector, IntPtr implementation, [MarshalAs(UnmanagedType.LPUTF8Str)] string types);
     [DllImport(Lib)] public static extern bool class_addMethod(IntPtr cls, IntPtr selector, IntPtr implementation, [MarshalAs(UnmanagedType.LPUTF8Str)] string types);
 }
