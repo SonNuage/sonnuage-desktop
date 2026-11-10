@@ -32,4 +32,10 @@
     <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Adresse de la dernière release, pour les mises à jour : posée par la CI (build/package.sh, UPDATE_FEED), absente
+       en développement (aucune vérification). -->
+  <ItemGroup Condition="'$(UpdateFeed)' != ''">
+    <AssemblyMetadata Include="UpdateFeed" Value="$(UpdateFeed)" />
+  </ItemGroup>
+
 </Project>

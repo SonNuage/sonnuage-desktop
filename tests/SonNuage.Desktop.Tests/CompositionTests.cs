@@ -28,6 +28,8 @@ public sealed class CompositionTests : IDisposable
         Assert.NotNull(provider.GetRequiredService<PlaybackSettings>());
         Assert.NotNull(provider.GetRequiredService<Localizer>());
         Assert.NotNull(provider.GetRequiredService<DesktopOptions>());
+        // Build de développement : pas d'adresse de publication, aucune vérification de mise à jour.
+        Assert.Equal(UpdateState.Disabled, provider.GetRequiredService<UpdateService>().State);
     }
 
     [Fact]

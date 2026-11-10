@@ -25,7 +25,8 @@ public sealed class Shell : IDisposable
     // Fenêtre native fermée (l'appli s'arrête) : plus d'Invoke possible.
     private volatile bool _closed;
     // Dernier état affiché par l'icône : le menu n'est reconstruit que s'il change.
-    private (bool Playing, bool HasTrack, string Tip, string Language)? _shown;
+    private (bool Playing, bool HasTrack, string Tip, string Language, string? Update)? _shown;
+    private readonly UpdateService _updates;
 
     private readonly SingleInstance? _instance;
     // Lancée avec la session et « démarrer caché » : la fenêtre reste cachée tant qu'on ne la demande pas.
@@ -40,6 +41,7 @@ public sealed class Shell : IDisposable
         _player = app.Services.GetRequiredService<IPlayer>();
         _page = app.Services.GetRequiredService<PageJsRuntime>();
         _localizer = app.Services.GetRequiredService<Localizer>();
+        _updates = app.Services.GetRequiredService<UpdateService>();
         app.MainWindow.RegisterWindowCreatedHandler((_, _) => OnCreated());
         app.MainWindow.RegisterWindowClosingHandler((_, _) => OnClosing());
     }
@@ -54,11 +56,21 @@ public sealed class Shell : IDisposable
         {
             if (!_closed) _app.MainWindow.Invoke(Show);
         };
+        // Installeur lancé : il remplace l'appli puis la relance, elle doit s'arrêter.
+        _updates.QuitRequested += () =>
+        {
+            if (!_closed) _app.MainWindow.Invoke(Quit);
+        };
+        _updates.Start();
         _tray = TrayFactory.Create(_icons, Title);
         if (_tray is null) return;
         _tray.Activated += Toggle;
         _player.StateChanged += () => _app.MainWindow.Invoke(Refresh);
         _localizer.Changed += () => _app.MainWindow.Invoke(Refresh);
+        _updates.Changed += () =>
+        {
+            if (!_closed) _app.MainWindow.Invoke(Refresh);
+        };
         Refresh();
         if (_hiddenAtStart) HideAtStart();
     }
@@ -112,12 +124,15 @@ public sealed class Shell : IDisposable
         var track = state.Current;
         var l = _localizer;
         var tip = track is null ? Title : $"{track.Title} · {track.ArtistName}";
-        var shown = (state.IsPlaying, track is not null, tip, l.Language);
+        var update = UpdateLabel();
+        var shown = (state.IsPlaying, track is not null, tip, l.Language, update);
         if (_shown == shown) return;
         _shown = shown;
 
         _tray.SetToolTip(tip);
+        IReadOnlyList<TrayItem> install = update is null ? [] : [new TrayItem(update, () => _ = _updates.InstallAsync()), TrayItem.Separator];
         _tray.SetMenu([
+            .. install,
             new TrayItem(l["desktop.show"], Show),
             TrayItem.Separator,
             new TrayItem(state.IsPlaying ? l["player.pause"] : l["player.play"], () => Command(p => p.TogglePlayAsync()), track is not null),
@@ -126,6 +141,18 @@ public sealed class Shell : IDisposable
             TrayItem.Separator,
             new TrayItem(l["desktop.quit"], Quit),
         ]);
+    }
+
+    /// <summary>
+    /// « Installer SonNuage X.Y.Z » quand une version attend. Rien tant que SonNuage.UI n'a pas ce texte (avant 1.25) :
+    /// le menu montrerait sa clé.
+    /// </summary>
+    private string? UpdateLabel()
+    {
+        if (_updates is not { State: UpdateState.Available, Available: { } available }) return null;
+        const string key = "desktop.update.tray";
+        var label = _localizer[key, ("version", available.Version)];
+        return label == key ? null : label;
     }
 
     private void Command(Func<IPlayer, Task> command) => _ = _page.DispatchAsync(() => command(_player));
