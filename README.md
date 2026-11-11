@@ -1,125 +1,130 @@
-# SonNuage bureau
+# SonNuage desktop
 
-Appli de bureau de [SonNuage](https://github.com/SonNuage/sonnuage), serveur de musique auto-hébergé, pour
-Windows, macOS et Linux. Les pages du client web s'affichent dans la webview du système (WebView2 sous Windows,
-WKWebView sous macOS, WebKitGTK sous Linux) grâce à [Photino](https://www.tryphotino.io/). Pas de Chromium embarqué :
-environ 40 Mo, runtime .NET compris, et 120 Mo de mémoire.
+**English** · [Français](README.fr.md)
 
-| Dossier | Rôle |
+Desktop app for [SonNuage](https://github.com/SonNuage/sonnuage), a self-hosted music server, for
+Windows, macOS and Linux. The pages of the web client are shown in the system webview (WebView2 on Windows,
+WKWebView on macOS, WebKitGTK on Linux) thanks to [Photino](https://www.tryphotino.io/). No embedded Chromium:
+about 40 MB, .NET runtime included, and 120 MB of memory.
+
+Status: works, used occasionally, so less tested than the web player and the Android app. See
+[Known limits](#known-limits).
+
+| Folder | Role |
 |---|---|
-| `src/SonNuage.Desktop` | Application : hôte Photino, icône de la barre système, stockage des comptes |
-| `build/` | Paquets par système (`package.sh`) : installeur Windows (`windows/`), `.deb` (`linux/`), signature et droits macOS (`macos/`), Info.plist, icône, lanceur Linux |
+| `src/SonNuage.Desktop` | App: Photino host, tray icon, storage of the accounts |
+| `build/` | Packages per system (`package.sh`): Windows installer (`windows/`), `.deb` (`linux/`), macOS signing and entitlements (`macos/`), Info.plist, icon, Linux launcher |
 
-Les pages, les composants et le lecteur (`WebPlayer`) viennent de la bibliothèque `SonNuage.UI` du dépôt
-[sonnuage](https://github.com/SonNuage/sonnuage) :
+The pages, the components and the player (`WebPlayer`) come from the `SonNuage.UI` library of the
+[sonnuage](https://github.com/SonNuage/sonnuage) repository:
 
-- **en CI** : paquet NuGet publié par la CI de `sonnuage` (version dans `Directory.Packages.props`)
-- **en développement** : si `sonnuage` est cloné à côté de ce dépôt (`../sonnuage`), ses sources sont utilisées
-  directement (voir `Directory.Build.props`, propriété `SonNuageRepo`).
+- **in CI**: NuGet package published by the CI of `sonnuage` (version in `Directory.Packages.props`)
+- **in development**: if `sonnuage` is cloned next to this repository (`../sonnuage`), its sources are used
+  directly (see `Directory.Build.props`, property `SonNuageRepo`).
 
-Pour suivre une nouvelle version du serveur, monter `SonNuage.UI` dans `Directory.Packages.props` à la version
-publiée `X.Y.Z` (tag du serveur). Les builds `0.1.0-ci.N` de `main` ne restent pas dans le registre : ne pas s'y
-fier pour une version de l'appli. Le test `CompositionTests` signale une dépendance nouvelle qui manquerait.
+To follow a new server version, raise `SonNuage.UI` in `Directory.Packages.props` to the published
+version `X.Y.Z` (server tag). The `0.1.0-ci.N` builds of `main` do not stay in the registry: do not rely on
+them for a version of the app. The `CompositionTests` test reports a new dependency that would be missing.
 
-## Développement
+## Development
 
 ```bash
 dotnet run --project src/SonNuage.Desktop
 dotnet test
 ```
 
-Les tests (`tests/SonNuage.Desktop.Tests`) couvrent le stockage local (`DesktopStore`), l'adresse du serveur
-(`AccountEndpoint`), l'instance unique, les entrées de démarrage de chaque système, les mises à jour (lecture de la
-release, choix du fichier, somme SHA-256) et les composants affichés par SonNuage.UI. L'icône de la barre système,
-la fenêtre et les installeurs s'essaient à la main, sur chaque système.
+The tests (`tests/SonNuage.Desktop.Tests`) cover local storage (`DesktopStore`), the server address
+(`AccountEndpoint`), the single instance, the startup entries of each system, updates (reading the
+release, choosing the file, SHA-256 checksum) and the components shown by SonNuage.UI. The tray icon,
+the window and the installers are tried by hand, on each system.
 
-## Fonctionnement
+## How it works
 
-- **Comptes** : au premier lancement, l'appli demande l'adresse du serveur puis l'identifiant. Plusieurs serveurs
-  et comptes, comme sur Android. Changer de compte arrête la lecture et recharge la file de l'autre compte.
-- **Barre système** : fermer la fenêtre la cache et la musique continue. L'icône la rouvre (clic sous Windows,
-  menu ailleurs) et offre lecture/pause, suivant, précédent et Quitter. Sans icône (Linux sans indicateur), fermer
-  la fenêtre quitte l'appli.
-- **Touches média** et contrôles du système : par l'API MediaSession de la webview, comme dans un navigateur.
-- **Une seule appli** : la relancer ramène la fenêtre de celle qui tourne. La première tient `instance.lock` (dossier
-  de données) et écoute sur une socket Unix `app.sock` ; macOS, lui, envoie « reopen » à l'appli (Finder, Dock).
-- **Lancement avec la session** (désactivé par défaut) et **démarrage caché** (seule l'icône de la barre système
-  apparaît), dans Réglages → Appli de bureau. Entrée du système : valeur `SonNuage` sous
+- **Accounts**: on first launch, the app asks for the server address, then the login. Several servers
+  and accounts, as on Android. Changing account stops playback and reloads the queue of the other account.
+- **System tray**: closing the window hides it and the music goes on. The icon reopens it (click on Windows,
+  menu elsewhere) and offers play/pause, next, previous and Quit. Without an icon (Linux without an indicator), closing
+  the window quits the app.
+- **Media keys** and system controls: through the webview's MediaSession API, as in a browser.
+- **Single instance**: launching it again brings back the window of the one that is running. The first one holds `instance.lock` (data
+  folder) and listens on a Unix socket `app.sock`; macOS, for its part, sends "reopen" to the app (Finder, Dock).
+- **Launch with the session** (off by default) and **hidden start** (only the tray icon
+  appears), in Settings → Desktop app. System entry: value `SonNuage` under
   `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, `~/Library/LaunchAgents/org.sonnuage.desktop.plist`,
-  `~/.config/autostart/sonnuage.desktop`. L'appli lancée ainsi reçoit `--autostart`.
-- **Mises à jour** : la dernière release GitLab de ce projet est lue 30 s après le démarrage puis toutes les 6 heures
-  (adresse posée au build par la CI, `UPDATE_FEED` ; aucune vérification en développement ni pour les builds
-  `0.1.0-ci.N`). Un bandeau propose la nouvelle version : l'installeur Windows s'exécute en silence et relance
-  l'appli, l'image disque macOS s'ouvre dans le Finder, le `.deb` dans la logithèque. Le fichier est contrôlé par le
-  `SHA256SUMS` de la release. Archive (zip, tar.gz) ou échec : la page de la version s'ouvre dans le navigateur. Le
-  projet GitLab doit être public (au moins ses releases et son registre de paquets) pour que l'appli y accède.
-- **Données** : `%APPDATA%\SonNuage`, `~/Library/Application Support/SonNuage` ou `~/.config/SonNuage`. Réglages
-  dans `settings.json`. La session est dans `session.json`, chiffrée par DPAPI sous Windows, lisible par le seul
-  utilisateur sous macOS et Linux.
+  `~/.config/autostart/sonnuage.desktop`. The app launched this way receives `--autostart`.
+- **Updates**: the latest GitLab release of this project is read 30 s after startup, then every 6 hours
+  (address set at build time by the CI, `UPDATE_FEED`; no check in development nor for the
+  `0.1.0-ci.N` builds). A banner offers the new version: the Windows installer runs silently and restarts
+  the app, the macOS disk image opens in the Finder, the `.deb` in the software center. The file is checked against the
+  release's `SHA256SUMS`. Archive (zip, tar.gz) or failure: the version's page opens in the browser. The
+  GitLab project must be public (at least its releases and its package registry) for the app to reach it.
+- **Data**: `%APPDATA%\SonNuage`, `~/Library/Application Support/SonNuage` or `~/.config/SonNuage`. Settings
+  in `settings.json`. The session is in `session.json`, encrypted by DPAPI on Windows, readable by the
+  user only on macOS and Linux.
 
-## Paquets
+## Packages
 
 ```bash
 build/package.sh win-x64 0.1.0 dist
 ```
 
-| Système | RID | Paquets |
+| System | RID | Packages |
 |---|---|---|
-| Windows | `win-x64` | `SonNuage-<version>-win-x64-setup.exe` : installeur NSIS pour l'utilisateur courant (sans droits d'administration, dans `%LOCALAPPDATA%\Programs\SonNuage`, désinstallable depuis les Paramètres) · `SonNuage-<version>-win-x64.zip` : `SonNuage.exe` autonome. WebView2 est fourni par Windows 10 et 11 |
-| macOS | `osx-arm64`, `osx-x64` | `SonNuage-<version>-<rid>.dmg` : image disque, glisser SonNuage dans Applications · `SonNuage-<version>-<rid>.zip` : `SonNuage.app`. Non signée sans certificat : premier lancement par clic droit → Ouvrir (ou Réglages Système → Confidentialité → Ouvrir quand même) |
-| Linux | `linux-x64` | `sonnuage_<version>_amd64.deb` : Debian, Ubuntu (dans `/opt/sonnuage`, commande `sonnuage`) · `SonNuage-<version>-linux-x64.tar.gz` : exécutable et lanceur `.desktop` |
+| Windows | `win-x64` | `SonNuage-<version>-win-x64-setup.exe`: NSIS installer for the current user (no administrator rights, in `%LOCALAPPDATA%\Programs\SonNuage`, removable from Settings) · `SonNuage-<version>-win-x64.zip`: standalone `SonNuage.exe`. WebView2 is provided by Windows 10 and 11 |
+| macOS | `osx-arm64`, `osx-x64` | `SonNuage-<version>-<rid>.dmg`: disk image, drag SonNuage into Applications · `SonNuage-<version>-<rid>.zip`: `SonNuage.app`. Unsigned without a certificate: first launch by right-click → Open (or System Settings → Privacy → Open Anyway) |
+| Linux | `linux-x64` | `sonnuage_<version>_amd64.deb`: Debian, Ubuntu (in `/opt/sonnuage`, command `sonnuage`) · `SonNuage-<version>-linux-x64.tar.gz`: executable and `.desktop` launcher |
 
-Outils : `zip`, `makensis` et `osslsigncode` (Windows), `dpkg-deb` (Linux), `xorriso` et `curl` (macOS), tous sous
-Linux : la CI n'a pas besoin de machine Windows ni de Mac. L'image macOS est une ISO 9660 avec Rock Ridge (droits et
-lien vers Applications), que macOS ouvre comme un `.dmg`, non compressée.
+Tools: `zip`, `makensis` and `osslsigncode` (Windows), `dpkg-deb` (Linux), `xorriso` and `curl` (macOS), all on
+Linux: the CI needs neither a Windows machine nor a Mac. The macOS image is an ISO 9660 with Rock Ridge (permissions and
+link to Applications), which macOS opens like a `.dmg`, uncompressed.
 
-### Signature
+### Signing
 
-Chaque étape ne s'active que si ses variables existent (GitLab : Settings → CI/CD → Variables, **protégées** pour
-ne servir qu'aux tags `v*`, mots de passe **masqués**). Sans elles, les paquets sont produits non signés.
+Each step runs only if its variables exist (GitLab: Settings → CI/CD → Variables, **protected** so that
+they serve only `v*` tags, passwords **masked**). Without them, the packages are produced unsigned.
 
-| Système | Variables | Étape |
+| System | Variables | Step |
 |---|---|---|
-| Windows | `WINDOWS_CERT_PFX` (type File, certificat de signature de code .pfx), `WINDOWS_CERT_PASSWORD`, facultatif `WINDOWS_TIMESTAMP_URL` | `build/windows/sign.sh` : `SonNuage.exe` puis l'installeur, par `osslsigncode` |
-| macOS | `MACOS_CERT_P12` (type File, « Developer ID Application » et sa clé), `MACOS_CERT_PASSWORD` | `build/macos/sign.sh` : signature avec runtime renforcé (`build/macos/entitlements.plist`) par `rcodesign` 0.27.0, téléchargé à ce moment (`RCODESIGN_SHA256` pour vérifier l'archive) |
-| macOS | `APPLE_API_KEY_JSON` (type File, clé App Store Connect convertie par `rcodesign encode-app-store-connect-api-key`) | notarisation et agrafage du ticket sur `SonNuage.app`, avant le `.dmg` |
+| Windows | `WINDOWS_CERT_PFX` (File type, .pfx code-signing certificate), `WINDOWS_CERT_PASSWORD`, optional `WINDOWS_TIMESTAMP_URL` | `build/windows/sign.sh`: `SonNuage.exe` then the installer, with `osslsigncode` |
+| macOS | `MACOS_CERT_P12` (File type, "Developer ID Application" and its key), `MACOS_CERT_PASSWORD` | `build/macos/sign.sh`: signing with hardened runtime (`build/macos/entitlements.plist`) by `rcodesign` 0.27.0, downloaded at that moment (`RCODESIGN_SHA256` to check the archive) |
+| macOS | `APPLE_API_KEY_JSON` (File type, App Store Connect key converted by `rcodesign encode-app-store-connect-api-key`) | notarization and stapling of the ticket on `SonNuage.app`, before the `.dmg` |
 
-Aucune valeur secrète n'est affichée dans le journal : les mots de passe passent par des fichiers temporaires.
+No secret value is printed in the log: the passwords go through temporary files.
 
-Sous Linux, il faut `libwebkit2gtk-4.1-0` et, pour l'icône, `libayatana-appindicator3-1` (GNOME : avec l'extension
-AppIndicator).
+On Linux, `libwebkit2gtk-4.1-0` is needed and, for the icon, `libayatana-appindicator3-1` (GNOME: with the
+AppIndicator extension).
 
 ## CI/CD
 
-- **GitLab** ([.gitlab-ci.yml](.gitlab-ci.yml)) : les tests et les quatre paquets en parallèle à chaque push, en artefacts.
-  Sur `main`, semantic-release crée le tag `vX.Y.Z` et sa release, à laquelle le pipeline du tag joint les paquets. Le projet doit être autorisé dans
-  sonnuage → Settings → CI/CD → Job token permissions, pour lire le paquet `SonNuage.UI`.
-- **GitHub Actions** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) : même chose, avec les sources de
-  `sonnuage` extraites à côté. Dépôt privé : secret `SONNUAGE_REPO_TOKEN`.
+- **GitLab** ([.gitlab-ci.yml](.gitlab-ci.yml)): the tests and the four packages in parallel on each push, as artifacts.
+  On `main`, semantic-release creates the `vX.Y.Z` tag and its release, to which the tag's pipeline attaches the packages. The project must be allowed in
+  sonnuage → Settings → CI/CD → Job token permissions, to read the `SonNuage.UI` package.
+- **GitHub Actions** ([.github/workflows/ci.yml](.github/workflows/ci.yml)): the same, with the sources of
+  `sonnuage` checked out next to it. Private repository: secret `SONNUAGE_REPO_TOKEN`.
 
 ## Versions
 
-Les versions sont publiées par [semantic-release](https://semantic-release.gitbook.io/) ([.releaserc.json](.releaserc.json)),
-d'après les messages de commit au format [Conventional Commits](https://www.conventionalcommits.org/fr/) :
-`fix: …` donne un correctif (1.0.1), `feat: …` une version mineure (1.1.0), `feat!: …` ou un pied de page
-`BREAKING CHANGE:` une version majeure (2.0.0). `docs`, `chore`, `ci`, `refactor`, `test` ne publient rien.
-Sur `main`, le job `semantic-release` crée le tag `vX.Y.Z` et la release GitLab avec ses notes. Le pipeline du
-tag publie ensuite la version. Il utilise `GITLAB_TOKEN`, jeton du groupe `sonnuage` (variable masquée et protégée,
-tags `v*` protégés).
+Versions are published by [semantic-release](https://semantic-release.gitbook.io/) ([.releaserc.json](.releaserc.json)),
+from the commit messages in the [Conventional Commits](https://www.conventionalcommits.org/en/) format:
+`fix: …` gives a patch (1.0.1), `feat: …` a minor version (1.1.0), `feat!: …` or a
+`BREAKING CHANGE:` footer a major version (2.0.0). `docs`, `chore`, `ci`, `refactor`, `test` publish nothing.
+On `main`, the `semantic-release` job creates the `vX.Y.Z` tag and the GitLab release with its notes. The tag's
+pipeline then publishes the version. It uses `GITLAB_TOKEN`, a token of the `sonnuage` group (masked and protected variable,
+protected `v*` tags).
 
-## Limites connues
+## Known limits
 
-- macOS et Linux ne sont pas encore essayés sur une vraie machine. Seul Windows l'a été.
-- Pré-chargement des pistes suivantes : il passe par `fetch` depuis la page (origine `http://localhost` sous
-  Windows, `app://localhost` ailleurs). Le serveur l'autorise sur le flux et les pochettes à partir de sa version
-  1.25.0 ; avec un serveur plus ancien, seule la lecture fonctionne.
-- Réglages « Appli de bureau » et bandeau de mise à jour : affichés par SonNuage.UI à partir de 1.25.0 (déclarés
-  par `DesktopPlatform.SettingsSections` et `Notices`). Avec 1.24.0, l'appli se construit mais ne les montre pas.
+- macOS and Linux have not been tried on a real machine yet. Only Windows has.
+- Preloading of the next tracks: it goes through `fetch` from the page (origin `http://localhost` on
+  Windows, `app://localhost` elsewhere). The server allows it on the stream and the covers from its version
+  1.25.0; with an older server, only playback works.
+- "Desktop app" settings and update banner: shown by SonNuage.UI from 1.25.0 (declared
+  by `DesktopPlatform.SettingsSections` and `Notices`). With 1.24.0, the app builds but does not show them.
 
 ## Licence
 
-SonNuage est un logiciel libre sous licence [GNU AGPL v3.0 ou ultérieure](LICENSE) : chacun peut l'utiliser,
-l'étudier, le modifier et le redistribuer. Une version modifiée, y compris proposée comme service en ligne, doit
-publier son code source sous la même licence.
+SonNuage is free software under the [GNU AGPL v3.0 or later](LICENSE) licence: anyone can use it,
+study it, modify it and redistribute it. A modified version, including one offered as an online service, must
+publish its source code under the same licence.
 
-Copyright © 2026 pmj.bailly et les contributeurs de SonNuage.
+Copyright © 2026 pmj.bailly and the SonNuage contributors.
