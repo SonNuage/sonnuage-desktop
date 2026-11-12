@@ -21,7 +21,9 @@ public sealed class CompositionTests : IDisposable
         var services = new ServiceCollection().AddSonNuageDesktop(_dir);
         await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
 
-        Assert.IsType<WebPlayer>(provider.GetRequiredService<IPlayer>());
+        // Le lecteur du PC rejoint les autres appareils du compte (en lecture sur…, lire ici).
+        Assert.IsType<LinkedPlayer>(provider.GetRequiredService<IPlayer>());
+        Assert.NotNull(provider.GetRequiredService<WebPlayer>());
         Assert.IsType<DesktopStore>(provider.GetRequiredService<IKeyValueStore>());
         Assert.IsType<AccountEndpoint>(provider.GetRequiredService<IServerEndpoint>());
         Assert.IsType<DesktopPlatform>(provider.GetRequiredService<IPlatformInfo>());

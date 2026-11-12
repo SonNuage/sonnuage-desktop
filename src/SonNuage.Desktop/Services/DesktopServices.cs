@@ -127,6 +127,8 @@ public sealed class DesktopPlatform : IPlatformInfo
 {
     public bool HasMeteredNetworkDetection => false;
     public string Name => "desktop";
+    /// <summary>Nom de l'ordinateur, montré aux autres appareils du compte.</summary>
+    public Task<string?> DeviceNameAsync() => Task.FromResult<string?>(Environment.MachineName);
     /// <summary>Version publiée de l'application, affichée dans l'aide et le menu du compte.</summary>
     public string? AppVersion => SonNuage.Contracts.AppVersion.Of(typeof(DesktopPlatform).Assembly);
     // Composants que SonNuage.UI affiche à partir de sa version 1.25 (IPlatformInfo) ; sans effet avec une version
